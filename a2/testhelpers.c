@@ -12,8 +12,9 @@ extern struct block *freelist;
 
 /* Prints each element of the list using the format string given below:*/
 void print_list(struct block *list) {
-
-        //printf("    [addr: %p, size: %d]\n", , );
+    for(; list!=NULL; list = list->next){
+        printf("    [addr: %p, size: %d]\n", list->addr, list->size);
+    }
 
     printf("\n");
 }
