@@ -17,38 +17,37 @@ void *smalloc(unsigned int nbytes) {
         if (freelist->size == nbytes){
             //Found a block of that size
             allocated_list = add_to_list(allocated_list, nbytes, freelist->addr);
-            return allocated_list;
+            return allocated_list->addr;
 
         }else if(freelist->size > nbytes){
             //Found a block bigger than nbytes
             allocated_list = add_to_list(allocated_list, nbytes, freelist->addr);
-            return allocated_list;
-
-            //Creates a new block and then points it to what freelist previously was pointing to
-            struct block *f = {(allocated_list->addr)+nbytes, (freelist->size)-nbytes, freelist->next};
-            freelist = f;
+            
+            freelist->addr = (allocated_list->addr)+nbytes;
+            freelist->size =(freelist->size)-nbytes;
+            
+            return allocated_list->addr;
         }
+        
     }
     return NULL;
-    
 }
 
 int sfree(void *addr) {
     struct block *cur, *prev;
+    cur = allocated_list;
+    prev = NULL;
 
-    for (cur = allocated_list, prev = NULL;
-        cur != NULL && cur->addr != addr;
-        prev = cur, cur = cur->next){
-        if (cur == NULL){
+    while((cur->addr) != addr){
+        if (cur == NULL)
             return -1;
-        }if (prev==NULL){
-            allocated_list = allocated_list->next; 
-        }else{
-            //Catches the memory address released from allocated to freelist
-            freelist = add_to_list(freelist, sizeof(cur), cur->addr);
-            prev->next = cur->next; //Will this alter allocated_list directly?
-        }
+        prev = cur;
+        cur = cur->next;
     }
+    
+    freelist = add_to_list(freelist, cur->size, cur->addr);
+    prev->next = cur->next;
+    
     return 0;
     
 }
@@ -62,10 +61,9 @@ void mem_init(int size) { //COMPLETE
 
     allocated_list = NULL; 
 
-    //Add first block to freelist. So freelist has one mmap sized block.
-    freelist = malloc(sizeof(mem)); //Should only use malloc here?
+    freelist = malloc(sizeof(struct block));
     freelist->addr = mem;
-    freelist->size = sizeof(mem);
+    freelist->size = size;
     freelist->next = NULL;
 }
 
@@ -78,14 +76,13 @@ void mem_clean(){
     }
 }
 
-/* Adds to list
-*/
+/* Adds to list */
 struct block *add_to_list(struct block *list, int sz, void *address){
     
     struct block *new_node = NULL;
 
-    //new_node = malloc(sizeof(struct block));
-
+    new_node = malloc(sizeof(struct block));
+    
     new_node->addr = address;
     new_node->size = sz;
     new_node->next = list;
