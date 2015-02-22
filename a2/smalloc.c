@@ -12,19 +12,32 @@ struct block *freelist;
 struct block *allocated_list; 
 
 void *smalloc(unsigned int nbytes) {
+    struct block *temp, *prev; //Don't want it to directly alter freelist
+    temp = freelist;
+    prev = NULL;
+    
     //Take nbytes from freelist block and create a block of size nbytes and put it in allocated_list.
-    for(; freelist!=NULL; freelist = freelist->next){
-        if (freelist->size == nbytes){
+    for(; temp!=NULL; prev = temp, temp = temp->next){
+        
+        if (temp->size == nbytes){
             //Found a block of that size
-            allocated_list = add_to_list(allocated_list, nbytes, freelist->addr);
+            allocated_list = add_to_list(allocated_list, nbytes, temp->addr);
+            
+            //Need to remove it from freelist
+            if (prev == NULL){ //The first free block is the right size
+                freelist = temp->next;
+                return allocated_list->addr;
+            }
+            
+            prev->next = temp->next; //If it's not
             return allocated_list->addr;
 
-        }else if(freelist->size > nbytes){
+        }else if(temp->size > nbytes){
             //Found a block bigger than nbytes
-            allocated_list = add_to_list(allocated_list, nbytes, freelist->addr);
+            allocated_list = add_to_list(allocated_list, nbytes, temp->addr);
             
-            freelist->addr = (allocated_list->addr)+nbytes;
-            freelist->size =(freelist->size)-nbytes;
+            temp->addr = (allocated_list->addr)+nbytes;
+            temp->size =(temp->size)-nbytes;
             
             return allocated_list->addr;
         }
@@ -38,17 +51,26 @@ int sfree(void *addr) {
     cur = allocated_list;
     prev = NULL;
 
-    while((cur->addr) != addr){
-        if (cur == NULL)
-            return -1;
+    while(cur!= NULL && addr!=NULL){
+        
+        if ((cur ->addr) == addr){
+            freelist = add_to_list(freelist, cur->size, cur->addr);
+            if (prev==NULL){ //if it wants to free the first address in allocated_list, then the head of allocated_list becomes cur -> next
+                allocated_list = cur->next;
+                return 0;
+            }
+            prev->next = cur->next;
+            
+            return 0;
+        }
+        
         prev = cur;
         cur = cur->next;
+        
     }
     
-    freelist = add_to_list(freelist, cur->size, cur->addr);
-    prev->next = cur->next;
-    
-    return 0;
+    return -1;
+
     
 }
 
