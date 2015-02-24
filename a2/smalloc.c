@@ -35,7 +35,7 @@ void *smalloc(unsigned int nbytes) {
         }else if(temp->size > nbytes){
             //Found a block bigger than nbytes
             allocated_list = add_to_list(allocated_list, nbytes, temp->addr);
-            
+
             temp->addr = (allocated_list->addr)+nbytes;
             temp->size =(temp->size)-nbytes;
             
@@ -90,12 +90,25 @@ void mem_init(int size) { //COMPLETE
 }
 
 void mem_clean(){
-    for(; freelist!=NULL; freelist = freelist->next){
-        free(freelist);
-    }
-    for(; allocated_list!=NULL; allocated_list = allocated_list->next){
-        free(allocated_list);
-    }
+
+	struct block *next_block = NULL;
+
+while (freelist!=NULL){
+	next_block = freelist->next;
+	free(freelist);
+	freelist = next_block;
+
+}
+
+
+next_block = NULL;
+while (allocated_list!=NULL){
+	next_block = allocated_list->next;
+	free(allocated_list);
+	allocated_list = next_block;
+
+}
+
 }
 
 /* Adds to list */
@@ -104,6 +117,7 @@ struct block *add_to_list(struct block *list, int sz, void *address){
     struct block *new_node = NULL;
 
     new_node = malloc(sizeof(struct block));
+
     
     new_node->addr = address;
     new_node->size = sz;
