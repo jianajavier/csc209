@@ -12,29 +12,52 @@ struct block *freelist;
 struct block *allocated_list; 
 
 void *smalloc(unsigned int nbytes) {
-    struct block *temp, *prev; //Don't want it to directly alter freelist
+    struct block *temp, *prev, *allocnext, *freecur; //Don't want it to directly alter freelist
     temp = freelist;
     prev = NULL;
+    allocnext = NULL;
+    freecur = NULL;
     
     //Take nbytes from freelist block and create a block of size nbytes and put it in allocated_list.
     for(; temp!=NULL; prev = temp, temp = temp->next){
         
         if (temp->size == nbytes){
             //Found a block of that size
-            allocated_list = add_to_list(allocated_list, nbytes, temp->addr);
+            //allocated_list = add_to_list(allocated_list, nbytes, temp->addr); //Wrong - Don't need to allocate new space.
+            //freecur = freelist->next;
             
-            //Need to remove it from freelist
+            //Need to change head of allocated_list to temp
+            //allocnext = temp;
+            //allocnext->next = allocated_list; //This changes freelist as well!!!!!!!
+            //allocated_list = allocnext;
+
             if (prev == NULL){ //The first free block is the right size
-                freelist = temp->next;
+                freecur = freelist->next; //Capture the rest of the LL before it changes from the next few lines
+                
+                //Add it to head of allocated_list
+                allocnext = freelist;
+                allocnext->next = allocated_list;
+                allocated_list = allocnext;
+                
+                //Need to remove it from freelist
+                freelist = freecur;
                 return allocated_list->addr;
             }
             
-            prev->next = temp->next; //If it's not
+            //If the size block is not the first block NEED TO TEST THIS AS WELL
+            //Capture freelist before and after that block
+            prev->next = temp->next;
+            
+            allocnext = temp;
+            allocnext->next = allocated_list; //This changes freelist as well!!!!!!!
+            allocated_list = allocnext;
+            
+            //prev->next = temp->next; //If it's not
             return allocated_list->addr;
 
         }else if(temp->size > nbytes){
             //Found a block bigger than nbytes
-            allocated_list = add_to_list(allocated_list, nbytes, temp->addr);
+            allocated_list = add_to_list(allocated_list, nbytes, temp->addr); //gGIVING ME ERRORS
 
             temp->addr = (allocated_list->addr)+nbytes;
             temp->size =(temp->size)-nbytes;
@@ -53,25 +76,28 @@ int sfree(void *addr) {
     curfree = NULL;
     curnext=NULL;//Want to capture the previous freelist.
     //This is supposed to be freelist but how can I make it freelist when freelist changes when I give it the new head cur?
-    
-    
 
     while(cur!= NULL && addr!=NULL){
         
         if ((cur ->addr) == addr){
+
+            if (prev==NULL){ //if it wants to free the first address in allocated_list, then the head of allocated_list becomes cur -> next
+                curnext = allocated_list->next; //Hold what the new allocated_list will be
+                
+                curfree = cur; //which is allocated_list's head
+                curfree->next = freelist;
+                freelist = curfree;
+                
+                allocated_list = curnext; //allocated loses its head
+                return 0;
+            }
+            
             curnext = cur->next;
             
             curfree = cur;
             curfree->next = freelist; //But I dont want to change curs value.............
             freelist = curfree;
-            //freelist = cur;
-            //freelist->next=nextfree;
-            
-            //freelist = add_to_list(freelist, cur->size, cur->addr);
-            if (prev==NULL){ //if it wants to free the first address in allocated_list, then the head of allocated_list becomes cur -> next
-                allocated_list = cur->next;
-                return 0;
-            }
+
             
             prev->next = curnext;
             
