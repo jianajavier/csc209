@@ -47,10 +47,11 @@ void *smalloc(unsigned int nbytes) {
 }
 
 int sfree(void *addr) {
-    struct block *cur, *prev,*curfree;
+    struct block *cur, *prev,*curfree, *curnext;
     cur = allocated_list;
     prev = NULL;
-    curfree = NULL; //Want to capture the previous freelist.
+    curfree = NULL;
+    curnext=NULL;//Want to capture the previous freelist.
     //This is supposed to be freelist but how can I make it freelist when freelist changes when I give it the new head cur?
     
     
@@ -58,9 +59,10 @@ int sfree(void *addr) {
     while(cur!= NULL && addr!=NULL){
         
         if ((cur ->addr) == addr){
+            curnext = cur->next;
             
             curfree = cur;
-            curfree->next = freelist;
+            curfree->next = freelist; //But I dont want to change curs value.............
             freelist = curfree;
             //freelist = cur;
             //freelist->next=nextfree;
@@ -71,7 +73,7 @@ int sfree(void *addr) {
                 return 0;
             }
             
-            prev->next = cur->next;
+            prev->next = curnext;
             
             return 0;
         }
@@ -104,6 +106,7 @@ void mem_init(int size) { //COMPLETE
 void mem_clean(){
 
 	struct block *next_block = NULL;
+    struct block *n_block = NULL;
 
 while (freelist!=NULL){
 	next_block = freelist->next;
@@ -112,12 +115,10 @@ while (freelist!=NULL){
 
 }
 
-
-next_block = NULL;
 while (allocated_list!=NULL){
-	next_block = allocated_list->next;
+	n_block = allocated_list->next;
 	free(allocated_list);
-	allocated_list = next_block;
+	allocated_list = n_block;
 
 }
 
