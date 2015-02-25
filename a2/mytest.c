@@ -18,7 +18,7 @@
  * and the head of the allocated_list.
  */
 
-int cool(void) {
+int main(void) {
     
     mem_init(SIZE);
     
@@ -34,10 +34,10 @@ int cool(void) {
     
     ptrs[0] = smalloc(200000);
     ptrs[1] = smalloc(60000);
-    ptrs[2] = smalloc(2100);
+    ptrs[2] = smalloc(2100); //GIVING ME ERRORS?
     ptrs[3] = smalloc(45); //Should be NULL
     
-    ptrs[6] = smalloc(20); //Allocating it to free it
+    ptrs[6] = smalloc(20); //Allocating it to free it //GIVING ME ERRORS?
     sfree(ptrs[6]); //It just goes to freelist right, but it still has a memory address?
     
     
@@ -51,9 +51,9 @@ int cool(void) {
     }
     
     printf("\nAllocated blocks:\n");
-    print_allocated(); //Should we print the actual block values
+    print_allocated();
     printf("Free blocks:\n");
-    print_free(); //Prints null
+    print_free(); 
     
     printf("\nResults of sfree on head in allocated_list (and then smallocing again):\n");
     printf("Expected = 0; Actual = %d\n", sfree(ptrs[2]));
@@ -72,7 +72,7 @@ int cool(void) {
     print_free(); //Prints two blocks
     
     printf("\nsmalloc-ing exactly 20 bytes");
-    ptrs[3] = smalloc(20); //Since it was NULL before, it shouldn't matter - Check if this takes from the 20 000 block or from the actual 44 block. Which one do we want it to take from..?
+    ptrs[3] = smalloc(20); //Since it was NULL before, it shouldn't matter BUT ITS GIVING ME ERRORS
     printf("\nptrs[3] = %p\n", ptrs[3]);
     
     printf("\nFreeing what we just smalloc-ed and smalloc-ing 21 bytes"); //Checks if it loops correctly through freelist, and correctly takes from the next block. But it's less than exact
@@ -112,3 +112,4 @@ int cool(void) {
     
     return 0;
 }
+
