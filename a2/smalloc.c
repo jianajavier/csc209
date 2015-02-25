@@ -47,18 +47,30 @@ void *smalloc(unsigned int nbytes) {
 }
 
 int sfree(void *addr) {
-    struct block *cur, *prev;
+    struct block *cur, *prev,*curfree;
     cur = allocated_list;
     prev = NULL;
+    curfree = NULL; //Want to capture the previous freelist.
+    //This is supposed to be freelist but how can I make it freelist when freelist changes when I give it the new head cur?
+    
+    
 
     while(cur!= NULL && addr!=NULL){
         
         if ((cur ->addr) == addr){
-            freelist = add_to_list(freelist, cur->size, cur->addr);
+            
+            curfree = cur;
+            curfree->next = freelist;
+            freelist = curfree;
+            //freelist = cur;
+            //freelist->next=nextfree;
+            
+            //freelist = add_to_list(freelist, cur->size, cur->addr);
             if (prev==NULL){ //if it wants to free the first address in allocated_list, then the head of allocated_list becomes cur -> next
                 allocated_list = cur->next;
                 return 0;
             }
+            
             prev->next = cur->next;
             
             return 0;

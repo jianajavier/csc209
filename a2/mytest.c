@@ -18,7 +18,7 @@
  * and the head of the allocated_list.
  */
 
-int main(void) {
+int cool(void) {
     
     mem_init(SIZE);
     
