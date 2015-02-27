@@ -35,7 +35,7 @@ void *smalloc(unsigned int nbytes) {
                 return allocated_list->addr;
             }
             
-            //If the size block is not the first block NEED TO TEST THIS AS WELL
+            //If the size block is not the first block 
             prev->next = temp->next;
             
             allocnext = temp;
@@ -111,7 +111,6 @@ void mem_init(int size) {
 }
 
 void mem_clean(){
-
 	struct block *next_block = NULL;
     struct block *n_block = NULL;
 
@@ -120,13 +119,11 @@ void mem_clean(){
         free(freelist);
         freelist = next_block;
     }
-
     while (allocated_list!=NULL){
         n_block = allocated_list->next;
         free(allocated_list);
         allocated_list = n_block;
     }
-
 }
 
 /* Adds to list */

@@ -31,7 +31,6 @@ void mem_clean();
 /* Add to allocated list*/
 struct block *add_to_list(struct block *list, int sz, void *address);
 
-//void add(struct block **list, struct block **newlist, struct block **currentlist);
 
 /****************************************************************************/
 /* Implemented in testhelpers.c */
