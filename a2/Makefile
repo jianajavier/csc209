@@ -1,7 +1,8 @@
 all : simpletest
 
-tests : simpletest.o mytest.o smalloc.o testhelpers.o
-	gcc -Wall -g -o simpletest simpletest.o smalloc.o testhelpers.o mytest mytest.o
+tests : mytest simpletest
+	./mytest 
+	./simpletest
 
 mytest : mytest.o smalloc.o testhelpers.o
 	gcc -Wall -g -o mytest mytest.o smalloc.o testhelpers.o

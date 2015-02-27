@@ -28,8 +28,9 @@ int sfree(void *addr);
 /* Free any dynamically used memory in the allocated and free list */
 void mem_clean();
 
-/* Adds to specified list*/
+/* Add to allocated list*/
 struct block *add_to_list(struct block *list, int sz, void *address);
+
 
 
 /****************************************************************************/

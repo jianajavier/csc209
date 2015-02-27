@@ -11,34 +11,42 @@
 
 /* This is an interesting test case because it tests the edge cases
  * for sfree and smalloc. It tests smalloc on an exact size of a free 
- * block if it is at the head of freelist, and if it is not. It also 
- * tests smalloc for a size that is larger than the head of freelist, 
- * but smaller than the next block in freelist. It also tests sfree
- * on a NULL pointer, a pointer that doesn't exist in allocated_list
- * and the head of the allocated_list.
+ * block if it is at the head of freelist and for 
+ * a size that is larger than the head of freelist, but smaller than
+ * the next block in freelist. Then it tests sfree on a NULL pointer,
+ * a pointer that doesn't exist in allocated_list, and the head of the
+ * allocated_list.
  */
 
 int main(void) {
     
     mem_init(SIZE);
     
-    char *ptrs[7];
+    char *ptrs[8];
     int i;
     
     printf("After initial call to mem_init()\n");
     printf("Allocated blocks:\n");
-    print_allocated(); //Should we print the actual block values
+    print_allocated(); 
     printf("Free blocks:\n");
-    print_free(); //Prints null
+    print_free();
     
     
     ptrs[0] = smalloc(200000);
     ptrs[1] = smalloc(60000);
-    ptrs[2] = smalloc(2100); //GIVING ME ERRORS?
-    ptrs[3] = smalloc(45); //Should be NULL
+    ptrs[2] = smalloc(2100);
+
+    //Should not work so ptrs[3] = NULL 
+    ptrs[3] = smalloc(45);
     
-    ptrs[6] = smalloc(20); //Allocating it to free it //GIVING ME ERRORS?
-    sfree(ptrs[6]); //It just goes to freelist right, but it still has a memory address?
+    //Allocating it to free it
+    ptrs[4] = smalloc(20);
+    sfree(ptrs[4]); //Now points to a block in freelist
+
+    //Will be used later
+    ptrs[5] = NULL;
+    ptrs[6] = NULL;
+    ptrs[7] = NULL;
     
     
     write_to_mem(200000, ptrs[0], 0);
@@ -46,8 +54,8 @@ int main(void) {
     write_to_mem(2100, ptrs[2], 2);
     
     printf("\nsmalloc results:\n");
-    for (i = 0; i < 7; i++) {
-        printf("ptrs[%d] = %p\n", i, ptrs[i]); //Last 4 should be null.. Should I check if the other ones correspond with the allocated_list values?
+    for (i = 0; i < 8; i++) {
+        printf("ptrs[%d] = %p\n", i, ptrs[i]);
     }
     
     printf("\nAllocated blocks:\n");
@@ -60,7 +68,7 @@ int main(void) {
     ptrs[2] = smalloc(2100);
     
     printf("\nResults of sfree on an address not in allocated_list:\n");
-    printf("Expected = -1; Actual = %d\n", sfree(ptrs[6]));
+    printf("Expected = -1; Actual = %d\n", sfree(ptrs[4]));
     
     printf("\nResults of sfree on NULL:\n");
     printf("Expected = -1; Actual = %d\n", sfree(ptrs[3]));
@@ -72,30 +80,29 @@ int main(void) {
     print_free(); //Prints two blocks
     
     printf("\nsmalloc-ing exactly 20 bytes");
-    ptrs[3] = smalloc(20); //Since it was NULL before, it shouldn't matter BUT ITS GIVING ME ERRORS
+    ptrs[3] = smalloc(20); //Since it was NULL before, it shouldn't matter
     printf("\nptrs[3] = %p\n", ptrs[3]);
     
-    printf("\nFreeing what we just smalloc-ed and smalloc-ing 21 bytes"); //Checks if it loops correctly through freelist, and correctly takes from the next block. But it's less than exact
-    sfree(ptrs[3]); //But can ptrs[3] still point to the same address?
-    ptrs[4] = smalloc(21);
+    printf("\nFreeing what we just smalloc-ed and smalloc-ing 21 bytes");
+    sfree(ptrs[3]);
+    ptrs[5] = smalloc(21);
     
     printf("\nAllocated blocks:\n");
     print_allocated();
     printf("Free blocks\n");
     print_free();
     
-    printf("\nsmallocing the remaining exactly 20 bytes"); //Oh it just takes from the 20 -- If I do 3, then it just takes from the 20 and makes it 17.
-    ptrs[6] = smalloc(20); //ptrs[6] has an address already, but it's been claimed by freelist
+    printf("\nsmallocing the remaining exactly 20 bytes");
+    ptrs[6] = smalloc(20);
     
     printf("\nAllocated blocks:\n");
     print_allocated();
     printf("Free blocks\n");
     print_free();
-    
     
     printf("smalloc results:\n");
-    for (i = 0; i < 7; i++) {
-        printf("ptrs[%d] = %p\n", i, ptrs[i]);
+    for (i = 0; i < 8; i++) {
+        printf("ptrs[%d] = %p\n", i, ptrs[i]); //ptrs[3], ptrs[4], ptrs[6] should be equal.
     }
     
     mem_clean();
@@ -103,12 +110,12 @@ int main(void) {
     printf("\nTesting mem_clean\n");
     printf("\nAllocated blocks:\n");
     print_allocated();
-    printf("Free blocks:\n");
+    printf("\nFree blocks:\n");
     print_free();
     
-    ptrs[5] = smalloc(1); //Should not work because cleaned
+    ptrs[7] = smalloc(1); //Should be NULL because cleaned
     printf("\nResults of trying to smalloc after mem_clean\n");
-    printf("ptrs[5] = %p\n", ptrs[5]);
+    printf("ptrs[7] = %p\n", ptrs[7]);
     
     return 0;
 }
