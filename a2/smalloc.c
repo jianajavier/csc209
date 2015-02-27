@@ -17,7 +17,11 @@ void *smalloc(unsigned int nbytes) {
     prev = NULL;
     allocnext = NULL;
     freecur = NULL;
-    
+
+    if (nbytes == 0){ //Cannot smalloc 0 bytes
+        return NULL;
+    }
+
     for(; temp!=NULL; prev = temp, temp = temp->next){
         
         if (temp->size == nbytes){
