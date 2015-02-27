@@ -104,7 +104,21 @@ int main(void) {
     for (i = 0; i < 8; i++) {
         printf("ptrs[%d] = %p\n", i, ptrs[i]); //ptrs[3], ptrs[4], ptrs[6] should be equal.
     }
-    
+
+    sfree(ptrs[0]);
+    sfree(ptrs[1]);
+
+    printf("\nAllocated blocks:\n");
+    print_allocated();
+    printf("Free blocks\n");
+    print_free();
+    ptrs[0] = smalloc(200000);
+    printf("\nAllocated blocks:\n");
+    print_allocated();
+    printf("Free blocks\n");
+    print_free();
+
+
     mem_clean();
     
     printf("\nTesting mem_clean\n");
