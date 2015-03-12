@@ -23,7 +23,8 @@ int main(void){
     } else if(n == 0) {
         fprintf(stderr, "Error: could not read from stdin");
         exit(1);
-    } 
+    }
+
     if (userid[n-1] == '\n')
         userid[n-1] = '\0';
     else
@@ -35,15 +36,18 @@ int main(void){
     } else if(n == 0) {
         fprintf(stderr, "Error: could not read from stdin");
         exit(1);
-    } 
+    }
+
     if (password[n-1] == '\n')
         password[n-1] = '\0';
     else
         password[n] = '\0';
-
+    
     strcat(userid, ":");
+    printf("%s", userid); //THIS IS ONLY RETURNING :
     user_length = strlen(userid);
     strcat(userid, password);
+
     FILE *fp = fopen(PASSWORD_FILE, "r");
     if (!fp) {
         perror("fopen");

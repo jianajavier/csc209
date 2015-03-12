@@ -51,8 +51,67 @@ int main(void) {
         exit(1);
     }
     strip(password, MAXPASSWD);
+    
+    int fd[2];
+    int excode=3;
+    
+    int result;
+    if((result = pipe(fd)) == -1) {
+        perror("pipe");
+        exit(1);
+    }
+    
+    int r;
+    if((r = fork()) == -1) {
+        perror("fork");
+        exit(1);
+        
+    } else if (r > 0) { //parent
+        // Parent will write to child
+        close(fd[0]);
 
-    /*Your code here*/
+        if(write(fd[1], userid, MAXPASSWD) == -1){
+            perror("write to pipe");
+        }
+        
+        if ( write(fd[1], password, MAXPASSWD) == -1) {
+            perror("write to pipe");
+        }
+        
+        //printf("[%d] finished writing\n", getpid());
+        
+        close(fd[1]);
+        //printf("[%d] stdin has been closed, waiting for child\n", getpid());
+        
+        int status;
+        if(wait(&status) != -1)  {
+            if(WIFEXITED(status)) {
+                //printf("[%d] Child exited with %d\n", getpid(),
+                       //WEXITSTATUS(status));
+                excode = WEXITSTATUS(status);
+            } else {
+                printf("[%d] Child exited abnormally\n", getpid());
+            }
+        }
+        
+        if (excode == 0) {
+            printf("Password verified");
+        } else if(excode == 2){
+            printf("Invalid password");
+        } else if(excode == 3){
+            printf("No such user\n");
+        }
+
+    } else { //child
+        close(fd[1]);
+        
+        dup2(fd[0], STDIN_FILENO);
+    
+        close(fd[0]);
+        
+        execlp("./validate", NULL, (char*)0);
+    }
+
     
     return 0;
 }
