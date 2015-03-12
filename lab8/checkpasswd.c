@@ -95,9 +95,9 @@ int main(void) {
         }
         
         if (excode == 0) {
-            printf("Password verified");
+            printf("Password verified\n");
         } else if(excode == 2){
-            printf("Invalid password");
+            printf("Invalid password\n");
         } else if(excode == 3){
             printf("No such user\n");
         }
@@ -109,7 +109,7 @@ int main(void) {
     
         close(fd[0]);
         
-        execlp("./validate", NULL, (char*)0);
+        execlp("./validate", NULL);
     }
 
     

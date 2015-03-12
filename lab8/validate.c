@@ -15,7 +15,7 @@ The program exits with a value of 0 if the user id and password match,
 int main(void){
     int n, user_length;
     char userid[30];
-    char password[10];
+    char password[11];
     
     if((n = read(STDIN_FILENO, userid, 10)) == -1) {
         perror("read");
@@ -35,16 +35,15 @@ int main(void){
         exit(1);
     } else if(n == 0) {
         fprintf(stderr, "Error: could not read from stdin");
-        exit(1);
+        exit(1); 
     }
 
     if (password[n-1] == '\n')
         password[n-1] = '\0';
     else
         password[n] = '\0';
-    
+
     strcat(userid, ":");
-    printf("%s", userid); //THIS IS ONLY RETURNING :
     user_length = strlen(userid);
     strcat(userid, password);
 
