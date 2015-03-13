@@ -15,7 +15,7 @@ The program exits with a value of 0 if the user id and password match,
 int main(void){
     int n, user_length;
     char userid[30];
-    char password[11];
+    char password[10];
     
     if((n = read(STDIN_FILENO, userid, 10)) == -1) {
         perror("read");
