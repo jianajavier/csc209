@@ -41,14 +41,14 @@ int main(int argc, char** argv) {
 		/* Display prompt */		
 		getcwd(cwd, MAX_DIRNAME-1);
 		printf("%s> ", cwd);
-		
-		/* Read the command line */
+
+        /* Read the command line */
 		fgets(command_line, MAX_COMMAND, stdin);
 		/* Strip the new line character */
 		if (command_line[strlen(command_line) - 1] == '\n') {
 			command_line[strlen(command_line) - 1] = '\0';
 		}
-		
+
 		/* Parse the command into tokens */
 		parse_line(command_line, tokens);
 
@@ -93,7 +93,7 @@ int main(int argc, char** argv) {
 int execute_cd(char** words) {
 	
 	/** 
-	 * TODO: DONE
+	 * TODO: WORKS AS EXPECTED
 	 * The first word contains the "cd" string, the second one contains 
 	 * the path.
 	 * Check possible errors:
@@ -102,15 +102,13 @@ int execute_cd(char** words) {
 	 * - If so, return an EXIT_FAILURE status to indicate something is 
 	 *   wrong.
 	 */
-    char cd[3] = {'c', 'd'};
-    if (words == NULL || words[0] == NULL || words[1] == NULL || words[0] != cd){
-        exit(EXIT_FAILURE);
+    if (words == NULL || words[0] == NULL || words[1] == NULL || strncmp(words[0], "cd", 2)){
+        printf("argument null\n");
+        return (EXIT_FAILURE);
     }
-
-
-
+    
 	/**
-	 * TODO: DONE
+	 * TODO: WORKS AS EXPECTED
 	 * The safest way would be to first determine if the path is relative 
 	 * or absolute (see is_relative function provided).
 	 * - If it's not relative, then simply change the directory to the path 
@@ -122,14 +120,14 @@ int execute_cd(char** words) {
 	 * Return the success/error code obtained when changing the directory.
 	 */
     
-    char cwd[1024]; //Don't necessarily know which size
+    char cwd[1024] = ""; //Don't necessarily know which size
     
-    if (is_relative(words[1]) == 0) //Not relative
+    if (is_relative(words[1]) == 1){ //Not relative
             strcat(cwd, words[1]);
-    else { //Relative
-        if (getcwd(cwd, sizeof(cwd)) != NULL)
+    }else { //Relative
+        if (getcwd(cwd, sizeof(cwd)) != NULL){
             strcat(cwd, words[1]);
-        else
+        }else
             perror("getcwd() error");
     }
     
@@ -152,7 +150,8 @@ int execute_cd(char** words) {
  * followed by a NULL token. 
  */
 int execute_command(char **tokens) {
-	
+    //printf("executing command\n");
+
 	/**
 	 * TODO: DONE
      * Execute a program, based on the tokens provided.
@@ -170,12 +169,14 @@ int execute_command(char **tokens) {
 	 * Function returns only in case of a failure (EXIT_FAILURE).
 	 */
     
-    if (execvp(*tokens, tokens+sizeof(tokens[0])) < 0){
+    if (execvp(*tokens, tokens) < 0){
         perror("exec error: ");
         return EXIT_FAILURE;
-    }
+    }else{
+        //printf("exec worked fine");
+        exit(0); //changed this to exit from return to try to solve infinite loop
     
-    exit(0);
+    }
 
 }
 
@@ -184,6 +185,8 @@ int execute_command(char **tokens) {
  * Executes a non-builtin command.
  */
 int execute_nonbuiltin(simple_command *s) {
+    //printf("executing non-builtin command\n");
+
 	/**
 	 * TODO: DONE
      * Check if the in, out, and err fields are set (not NULL),
@@ -200,28 +203,35 @@ int execute_nonbuiltin(simple_command *s) {
 	 */
     
     if (s->in != NULL){
-        int fd0 = open(s->in, O_RDONLY); //Should it be READONLY?
+        printf("STDIN not null\n");
+        int fd0 = open(s->in, O_RDWR); //Should it be READONLY?
         dup2(fd0, STDIN_FILENO);
         close(fd0);
     }
     
     if (s->out != NULL){
-        int fd1 = open(s->out, O_RDWR);
+        printf("STDOUT not null\n");
+
+        int fd1 = open(s->out, O_RDWR | O_APPEND | O_CREAT, S_IRWXU);
         dup2(fd1, STDOUT_FILENO);
         close(fd1);
     }
     
     if (s->err != NULL){
-        int fd2 = open(s->err, O_RDONLY);
+        printf("STDERR not null\n");
+
+        int fd2 = open(s->err, O_RDWR | O_APPEND | O_CREAT, S_IRWXU);
         dup2(fd2, STDERR_FILENO);
         close(fd2);
     }
     
     if (execute_command(s->tokens) < 0){
+        printf("execute_command error\n");
         return EXIT_FAILURE;
     }
     
-    exit(0);
+    // MAYBE CHANGE TO EXIT????????
+    exit(0); //How to return only if failure? CHANGED TO EXIT TO TRY TO FIX INFINIT LOOP.. BUT IF THE REST DOESNT WORK. THIS IS WHY
 }
 
 
@@ -229,6 +239,8 @@ int execute_nonbuiltin(simple_command *s) {
  * Executes a simple command (no pipes).
  */
 int execute_simple_command(simple_command *cmd) {
+    //printf("executing simple command\n");
+
 
 	/**
 	 * TODO: 
@@ -241,12 +253,12 @@ int execute_simple_command(simple_command *cmd) {
 	 * - The parent should wait for the child.
 	 *   (see wait man pages).
 	 */
-	
     if (cmd->builtin > 0){
         if (cmd->builtin == BUILTIN_CD){
             execute_cd(cmd->tokens);
         }
         else if (cmd->builtin == BUILTIN_EXIT){
+            printf("exiting\n");
             exit(EXIT_SUCCESS); //Is this an appropriate exit status?
         }
     }
@@ -265,7 +277,7 @@ int execute_simple_command(simple_command *cmd) {
                 } else {
                     printf("[%d] Child exited abnormally\n", getpid());
                 }
-                exit(WEXITSTATUS(status));
+                //exit(WEXITSTATUS(status));
             }
         } else { //child
             execute_nonbuiltin(cmd);
@@ -281,7 +293,7 @@ int execute_simple_command(simple_command *cmd) {
  * together with a pipe operator.
  */
 int execute_complex_command(command *c) {
-	
+    //printf("executing complex command\n");
 	/**
 	 * TODO:
 	 * Check if this is a simple command, using the scmd field.
@@ -290,9 +302,11 @@ int execute_complex_command(command *c) {
 	 * Execute nonbuiltin commands only. If it's exit or cd, you should not 
 	 * execute these in a piped context, so simply ignore builtin commands. 
 	 */
-    
+    sleep(1);
     if (c->scmd != NULL){
         //Simple command
+        //printf("simple command:");
+        //print_command(c, 0);
         if (c->scmd->builtin != 1){
             //Not builtin
             execute_nonbuiltin(c->scmd);
@@ -300,7 +314,6 @@ int execute_complex_command(command *c) {
         //Ignore builtin commands??
     }
 	
-
 
 	/** 
 	 * Optional: if you wish to handle more than just the 
@@ -347,6 +360,7 @@ int execute_complex_command(command *c) {
 		 *     - wait for both children to finish.
 		 */
         
+        // ls -l | grep jianajavier | wc -l SENT ME IN AN INFINITE LOOP also th enext one
         int r;
         if((r = fork()) == -1) {
             perror("fork");
@@ -356,18 +370,21 @@ int execute_complex_command(command *c) {
         
         else if (r > 0) { //parent
             int q;
+            
             if((q = fork()) == -1){
                 perror("fork");
                 exit(EXIT_FAILURE);
             }
             
             else if (q > 0){ //parent
+                int status;
+                int i;
+
                 close(pfd[0]);
                 close(pfd[1]);
                 
                 //Wait for both children
-                while (1) {
-                    int status;
+                for(i = 0; i < 2; i++) { //2 children processes
                     
                     if (wait(&status) != -1) {
                         if(WIFEXITED(status)) {
@@ -380,27 +397,31 @@ int execute_complex_command(command *c) {
                     }
                 }
                 
+                
+                
             }
             
             else { //child
-                close(pfd[0]);
-                close(STDIN_FILENO);
+                close(pfd[1]);
                 
-                dup2(pfd[1], STDIN_FILENO);
+                dup2(pfd[0], STDIN_FILENO);
+
+                
                 execute_complex_command(c->cmd2);
+                //close(STDIN_FILENO);
             }
             
         }
         
         else { //child
-            close(pfd[1]);
-            close(STDOUT_FILENO);
-            
-            dup2(pfd[0], STDOUT_FILENO);
-            
             close(pfd[0]);
-        
+            
+            
+            dup2(pfd[1], STDOUT_FILENO);
+
             execute_complex_command(c->cmd1);
+            //close(STDOUT_FILENO);
+            
         }
         
 		
