@@ -6,7 +6,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <string.h>
-#include <mcheck.h>
+//#include <mcheck.h>
 
 #include "parser.h"
 #include "shell.h"
@@ -93,7 +93,7 @@ int main(int argc, char** argv) {
 int execute_cd(char** words) {
 	
 	/** 
-	 * TODO: 
+	 * TODO: DONE
 	 * The first word contains the "cd" string, the second one contains 
 	 * the path.
 	 * Check possible errors:
@@ -102,11 +102,15 @@ int execute_cd(char** words) {
 	 * - If so, return an EXIT_FAILURE status to indicate something is 
 	 *   wrong.
 	 */
+    char cd[3] = {'c', 'd'};
+    if (words == NULL || words[0] == NULL || words[1] == NULL || words[0] != cd){
+        exit(EXIT_FAILURE);
+    }
 
 
 
 	/**
-	 * TODO: 
+	 * TODO: DONE
 	 * The safest way would be to first determine if the path is relative 
 	 * or absolute (see is_relative function provided).
 	 * - If it's not relative, then simply change the directory to the path 
@@ -117,7 +121,25 @@ int execute_cd(char** words) {
 	 * Hints: see chdir and getcwd man pages.
 	 * Return the success/error code obtained when changing the directory.
 	 */
-	 
+    
+    char cwd[1024]; //Don't necessarily know which size
+    
+    if (is_relative(words[1]) == 0) //Not relative
+            strcat(cwd, words[1]);
+    else { //Relative
+        if (getcwd(cwd, sizeof(cwd)) != NULL)
+            strcat(cwd, words[1]);
+        else
+            perror("getcwd() error");
+    }
+    
+    if (chdir(cwd) == 0){
+        return EXIT_SUCCESS;
+    } else {
+        perror(cwd);
+        return EXIT_FAILURE;
+    }
+    
 }
 
 
@@ -132,7 +154,8 @@ int execute_cd(char** words) {
 int execute_command(char **tokens) {
 	
 	/**
-	 * TODO: execute a program, based on the tokens provided.
+	 * TODO: DONE
+     * Execute a program, based on the tokens provided.
 	 * The first token is the command name, the rest are the arguments 
 	 * for the command. 
 	 * Hint: see execlp/execvp man pages.
@@ -146,7 +169,13 @@ int execute_command(char **tokens) {
 	 *   would suffice.
 	 * Function returns only in case of a failure (EXIT_FAILURE).
 	 */
-
+    
+    if (execvp(*tokens, tokens+sizeof(tokens[0])) < 0){
+        perror("exec error: ");
+        return EXIT_FAILURE;
+    }
+    
+    exit(0);
 
 }
 
@@ -156,7 +185,8 @@ int execute_command(char **tokens) {
  */
 int execute_nonbuiltin(simple_command *s) {
 	/**
-	 * TODO: Check if the in, out, and err fields are set (not NULL),
+	 * TODO: DONE
+     * Check if the in, out, and err fields are set (not NULL),
 	 * and, IN EACH CASE:
 	 * - Open a new file descriptor (make sure you have the correct flags,
 	 *   and permissions);
@@ -168,8 +198,30 @@ int execute_nonbuiltin(simple_command *s) {
 	 *   function above).
 	 * This function returns only if the execution of the program fails.
 	 */
-	
-
+    
+    if (s->in != NULL){
+        int fd0 = open(s->in, O_RDONLY); //Should it be READONLY?
+        dup2(fd0, STDIN_FILENO);
+        close(fd0);
+    }
+    
+    if (s->out != NULL){
+        int fd1 = open(s->out, O_RDWR);
+        dup2(fd1, STDOUT_FILENO);
+        close(fd1);
+    }
+    
+    if (s->err != NULL){
+        int fd2 = open(s->err, O_RDONLY);
+        dup2(fd2, STDERR_FILENO);
+        close(fd2);
+    }
+    
+    if (execute_command(s->tokens) < 0){
+        return EXIT_FAILURE;
+    }
+    
+    exit(0);
 }
 
 
@@ -190,6 +242,37 @@ int execute_simple_command(simple_command *cmd) {
 	 *   (see wait man pages).
 	 */
 	
+    if (cmd->builtin > 0){
+        if (cmd->builtin == BUILTIN_CD){
+            execute_cd(cmd->tokens);
+        }
+        else if (cmd->builtin == BUILTIN_EXIT){
+            exit(EXIT_SUCCESS); //Is this an appropriate exit status?
+        }
+    }
+    else {
+        int r;
+        if((r = fork()) == -1) {
+            perror("fork");
+            exit(1);
+            
+        } else if (r > 0) { //parent
+            int status;
+            if(wait(&status) != -1)  {
+                if(WIFEXITED(status)) { //What to do after child exits?
+                    printf("[%d] Child exited with %d\n", getpid(),
+                           WEXITSTATUS(status));
+                } else {
+                    printf("[%d] Child exited abnormally\n", getpid());
+                }
+                exit(WEXITSTATUS(status));
+            }
+        } else { //child
+            execute_nonbuiltin(cmd);
+        }
+    }
+    
+    return 0; //What am I supposed to return?
 }
 
 
@@ -207,6 +290,15 @@ int execute_complex_command(command *c) {
 	 * Execute nonbuiltin commands only. If it's exit or cd, you should not 
 	 * execute these in a piped context, so simply ignore builtin commands. 
 	 */
+    
+    if (c->scmd != NULL){
+        //Simple command
+        if (c->scmd->builtin != 1){
+            //Not builtin
+            execute_nonbuiltin(c->scmd);
+        }
+        //Ignore builtin commands??
+    }
 	
 
 
@@ -224,6 +316,13 @@ int execute_complex_command(command *c) {
 		 * parent and the child. Make sure to check any errors in 
 		 * creating the pipe.
 		 */
+        int pfd[2];
+        
+        int result;
+        if((result = pipe(pfd)) == -1) {
+            perror("pipe");
+            exit(EXIT_FAILURE);
+        }
 
 			
 		/**
@@ -247,6 +346,63 @@ int execute_complex_command(command *c) {
 		 *     - close both ends of the pipe. 
 		 *     - wait for both children to finish.
 		 */
+        
+        int r;
+        if((r = fork()) == -1) {
+            perror("fork");
+            exit(1);
+            
+        }
+        
+        else if (r > 0) { //parent
+            int q;
+            if((q = fork()) == -1){
+                perror("fork");
+                exit(EXIT_FAILURE);
+            }
+            
+            else if (q > 0){ //parent
+                close(pfd[0]);
+                close(pfd[1]);
+                
+                //Wait for both children
+                while (1) {
+                    int status;
+                    
+                    if (wait(&status) != -1) {
+                        if(WIFEXITED(status)) {
+                            printf("[%d] Child exited with %d\n", getpid(),
+                                   WEXITSTATUS(status));
+                        } else {
+                            printf("[%d] Child exited abnormally\n", getpid());
+                            exit(EXIT_FAILURE);
+                        }
+                    }
+                }
+                
+            }
+            
+            else { //child
+                close(pfd[0]);
+                close(STDIN_FILENO);
+                
+                dup2(pfd[1], STDIN_FILENO);
+                execute_complex_command(c->cmd2);
+            }
+            
+        }
+        
+        else { //child
+            close(pfd[1]);
+            close(STDOUT_FILENO);
+            
+            dup2(pfd[0], STDOUT_FILENO);
+            
+            close(pfd[0]);
+        
+            execute_complex_command(c->cmd1);
+        }
+        
 		
 	}
 	return 0;
