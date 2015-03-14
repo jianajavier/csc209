@@ -122,9 +122,11 @@ int execute_cd(char** words) {
     
     char cwd[1024] = ""; //Don't necessarily know which size
     
-    if (is_relative(words[1]) == 1){ //Not relative
-            strcat(cwd, words[1]);
-    }else { //Relative
+    if (is_relative(words[1]) == 1){
+        //Not relative
+        strcat(cwd, words[1]);
+    }else {
+        //Relative
         if (getcwd(cwd, sizeof(cwd)) != NULL){
             strcat(cwd, words[1]);
         }else
@@ -169,15 +171,7 @@ int execute_command(char **tokens) {
 	 * Function returns only in case of a failure (EXIT_FAILURE).
 	 */
     
-    if (execvp(*tokens, tokens) < 0){
-        perror("exec error: ");
-        return EXIT_FAILURE;
-    }else{
-        //printf("exec worked fine");
-        exit(0); //changed this to exit from return to try to solve infinite loop
-    
-    }
-
+    return (execvp(*tokens, tokens));
 }
 
 
@@ -224,14 +218,8 @@ int execute_nonbuiltin(simple_command *s) {
         dup2(fd2, STDERR_FILENO);
         close(fd2);
     }
-    
-    if (execute_command(s->tokens) < 0){
-        printf("execute_command error\n");
-        return EXIT_FAILURE;
-    }
-    
-    // MAYBE CHANGE TO EXIT????????
-    exit(0); //How to return only if failure? CHANGED TO EXIT TO TRY TO FIX INFINIT LOOP.. BUT IF THE REST DOESNT WORK. THIS IS WHY
+
+    return (execute_command(s->tokens));
 }
 
 
@@ -240,8 +228,7 @@ int execute_nonbuiltin(simple_command *s) {
  */
 int execute_simple_command(simple_command *cmd) {
     //printf("executing simple command\n");
-
-
+    
 	/**
 	 * TODO: 
 	 * Check if the command is builtin.
@@ -271,20 +258,19 @@ int execute_simple_command(simple_command *cmd) {
         } else if (r > 0) { //parent
             int status;
             if(wait(&status) != -1)  {
-                if(WIFEXITED(status)) { //What to do after child exits?
+                if(WIFEXITED(status)) {
                     printf("[%d] Child exited with %d\n", getpid(),
                            WEXITSTATUS(status));
                 } else {
                     printf("[%d] Child exited abnormally\n", getpid());
                 }
-                //exit(WEXITSTATUS(status));
             }
         } else { //child
             execute_nonbuiltin(cmd);
         }
     }
     
-    return 0; //What am I supposed to return?
+    return 0;
 }
 
 
@@ -302,16 +288,10 @@ int execute_complex_command(command *c) {
 	 * Execute nonbuiltin commands only. If it's exit or cd, you should not 
 	 * execute these in a piped context, so simply ignore builtin commands. 
 	 */
-    sleep(1);
     if (c->scmd != NULL){
-        //Simple command
-        //printf("simple command:");
-        //print_command(c, 0);
         if (c->scmd->builtin != 1){
-            //Not builtin
             execute_nonbuiltin(c->scmd);
         }
-        //Ignore builtin commands??
     }
 	
 
@@ -336,7 +316,6 @@ int execute_complex_command(command *c) {
             perror("pipe");
             exit(EXIT_FAILURE);
         }
-
 			
 		/**
 		 * TODO: Fork a new process.
@@ -359,8 +338,6 @@ int execute_complex_command(command *c) {
 		 *     - close both ends of the pipe. 
 		 *     - wait for both children to finish.
 		 */
-        
-        // ls -l | grep jianajavier | wc -l SENT ME IN AN INFINITE LOOP also th enext one
         int r;
         if((r = fork()) == -1) {
             perror("fork");
@@ -368,7 +345,8 @@ int execute_complex_command(command *c) {
             
         }
         
-        else if (r > 0) { //parent
+        else if (r > 0) { //parent1
+
             int q;
             
             if((q = fork()) == -1){
@@ -376,7 +354,7 @@ int execute_complex_command(command *c) {
                 exit(EXIT_FAILURE);
             }
             
-            else if (q > 0){ //parent
+            else if (q > 0){ //parent2
                 int status;
                 int i;
 
@@ -384,28 +362,27 @@ int execute_complex_command(command *c) {
                 close(pfd[1]);
                 
                 //Wait for both children
-                for(i = 0; i < 2; i++) { //2 children processes
+                for(i = 0; i < 1; i++) { //2 children processes
                     
                     if (wait(&status) != -1) {
                         if(WIFEXITED(status)) {
                             printf("[%d] Child exited with %d\n", getpid(),
                                    WEXITSTATUS(status));
+                            //_exit(EXIT_SUCCESS); THIS IS THE ONLY THING THAT WORKS RIGHT NOW BUT IT EXITS ME OUT OF THE ENTIRE PROGRAM
                         } else {
                             printf("[%d] Child exited abnormally\n", getpid());
                             exit(EXIT_FAILURE);
                         }
                     }
                 }
-                
-                
-                
             }
             
-            else { //child
+            else { //child 2
+                printf("child2\n");
                 close(pfd[1]);
                 
                 dup2(pfd[0], STDIN_FILENO);
-
+                
                 
                 execute_complex_command(c->cmd2);
                 //close(STDIN_FILENO);
@@ -413,9 +390,9 @@ int execute_complex_command(command *c) {
             
         }
         
-        else { //child
+        else { //child 1
+            printf("child1\n");
             close(pfd[0]);
-            
             
             dup2(pfd[1], STDOUT_FILENO);
 
@@ -423,7 +400,6 @@ int execute_complex_command(command *c) {
             //close(STDOUT_FILENO);
             
         }
-        
 		
 	}
 	return 0;
