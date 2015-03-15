@@ -93,7 +93,7 @@ int main(int argc, char** argv) {
 int execute_cd(char** words) {
 	
 	/** 
-	 * TODO: WORKS AS EXPECTED
+	 * TODO:
 	 * The first word contains the "cd" string, the second one contains 
 	 * the path.
 	 * Check possible errors:
@@ -108,7 +108,7 @@ int execute_cd(char** words) {
     }
     
 	/**
-	 * TODO: WORKS AS EXPECTED
+	 * TODO:
 	 * The safest way would be to first determine if the path is relative 
 	 * or absolute (see is_relative function provided).
 	 * - If it's not relative, then simply change the directory to the path 
@@ -152,10 +152,8 @@ int execute_cd(char** words) {
  * followed by a NULL token. 
  */
 int execute_command(char **tokens) {
-    //printf("executing command\n");
-
 	/**
-	 * TODO: DONE
+	 * TODO:
      * Execute a program, based on the tokens provided.
 	 * The first token is the command name, the rest are the arguments 
 	 * for the command. 
@@ -170,8 +168,14 @@ int execute_command(char **tokens) {
 	 *   would suffice.
 	 * Function returns only in case of a failure (EXIT_FAILURE).
 	 */
+    int p;
     
-    return (execvp(*tokens, tokens));
+    if ((p = execvp(*tokens, tokens))){
+        fprintf(stderr, "%s: ", *tokens);
+        perror("");
+    }
+    
+    return p;
 }
 
 
@@ -179,10 +183,8 @@ int execute_command(char **tokens) {
  * Executes a non-builtin command.
  */
 int execute_nonbuiltin(simple_command *s) {
-    //printf("executing non-builtin command\n");
-
 	/**
-	 * TODO: DONE
+	 * TODO:
      * Check if the in, out, and err fields are set (not NULL),
 	 * and, IN EACH CASE:
 	 * - Open a new file descriptor (make sure you have the correct flags,
@@ -198,7 +200,7 @@ int execute_nonbuiltin(simple_command *s) {
     
     if (s->in != NULL){
         printf("STDIN not null\n");
-        int fd0 = open(s->in, O_RDWR); //Should it be READONLY?
+        int fd0 = open(s->in, O_RDWR);
         dup2(fd0, STDIN_FILENO);
         close(fd0);
     }
@@ -227,8 +229,6 @@ int execute_nonbuiltin(simple_command *s) {
  * Executes a simple command (no pipes).
  */
 int execute_simple_command(simple_command *cmd) {
-    //printf("executing simple command\n");
-    
 	/**
 	 * TODO: 
 	 * Check if the command is builtin.
@@ -245,24 +245,22 @@ int execute_simple_command(simple_command *cmd) {
             execute_cd(cmd->tokens);
         }
         else if (cmd->builtin == BUILTIN_EXIT){
-            printf("exiting\n");
-            exit(EXIT_SUCCESS); //Is this an appropriate exit status?
+            exit(EXIT_SUCCESS);
         }
     }
     else {
         int r;
         if((r = fork()) == -1) {
             perror("fork");
-            exit(1);
+            exit(EXIT_FAILURE);
             
         } else if (r > 0) { //parent
             int status;
             if(wait(&status) != -1)  {
                 if(WIFEXITED(status)) {
-                    printf("[%d] Child exited with %d\n", getpid(),
-                           WEXITSTATUS(status));
+                    return (WEXITSTATUS(status));
                 } else {
-                    printf("[%d] Child exited abnormally\n", getpid());
+                    return(WEXITSTATUS(status));
                 }
             }
         } else { //child
@@ -279,7 +277,6 @@ int execute_simple_command(simple_command *cmd) {
  * together with a pipe operator.
  */
 int execute_complex_command(command *c) {
-    //printf("executing complex command\n");
 	/**
 	 * TODO:
 	 * Check if this is a simple command, using the scmd field.
@@ -288,7 +285,7 @@ int execute_complex_command(command *c) {
 	 * Execute nonbuiltin commands only. If it's exit or cd, you should not 
 	 * execute these in a piped context, so simply ignore builtin commands. 
 	 */
-    if (c->scmd != NULL){
+    if (c->scmd){
         if (c->scmd->builtin != 1){
             execute_nonbuiltin(c->scmd);
         }
@@ -341,12 +338,11 @@ int execute_complex_command(command *c) {
         int r;
         if((r = fork()) == -1) {
             perror("fork");
-            exit(1);
+            exit(EXIT_FAILURE);
             
         }
         
         else if (r > 0) { //parent1
-
             int q;
             
             if((q = fork()) == -1){
@@ -358,47 +354,47 @@ int execute_complex_command(command *c) {
                 int status;
                 int i;
 
-                close(pfd[0]);
-                close(pfd[1]);
+                if (close(pfd[0]) == -1){
+                    perror("close");
+                    exit(EXIT_FAILURE);
+                }
                 
+                if (close(pfd[1]) == -1){
+                    perror("close");
+                    exit(EXIT_FAILURE);
+                }
+
                 //Wait for both children
-                for(i = 0; i < 1; i++) { //2 children processes
+                for(i = 0; i < 2; i++) { //2 children processes
                     
                     if (wait(&status) != -1) {
                         if(WIFEXITED(status)) {
-                            printf("[%d] Child exited with %d\n", getpid(),
-                                   WEXITSTATUS(status));
-                            //_exit(EXIT_SUCCESS); THIS IS THE ONLY THING THAT WORKS RIGHT NOW BUT IT EXITS ME OUT OF THE ENTIRE PROGRAM
+                            //printf("[%d] Child exited with %d in parent 2\n", getpid(),
+                                   //WEXITSTATUS(status));
                         } else {
-                            printf("[%d] Child exited abnormally\n", getpid());
-                            exit(EXIT_FAILURE);
+                            return(EXIT_FAILURE);
                         }
                     }
                 }
+                
+                
             }
             
             else { //child 2
-                printf("child2\n");
                 close(pfd[1]);
                 
                 dup2(pfd[0], STDIN_FILENO);
-                
-                
-                execute_complex_command(c->cmd2);
-                //close(STDIN_FILENO);
-            }
             
+                exit(execute_complex_command(c->cmd2));
+            }
         }
         
         else { //child 1
-            printf("child1\n");
             close(pfd[0]);
             
             dup2(pfd[1], STDOUT_FILENO);
 
-            execute_complex_command(c->cmd1);
-            //close(STDOUT_FILENO);
-            
+            exit(execute_complex_command(c->cmd1));
         }
 		
 	}
