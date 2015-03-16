@@ -199,23 +199,18 @@ int execute_nonbuiltin(simple_command *s) {
 	 */
     
     if (s->in != NULL){
-        printf("STDIN not null\n");
         int fd0 = open(s->in, O_RDWR);
         dup2(fd0, STDIN_FILENO);
         close(fd0);
     }
     
     if (s->out != NULL){
-        printf("STDOUT not null\n");
-
         int fd1 = open(s->out, O_RDWR | O_APPEND | O_CREAT, S_IRWXU);
         dup2(fd1, STDOUT_FILENO);
         close(fd1);
     }
     
     if (s->err != NULL){
-        printf("STDERR not null\n");
-
         int fd2 = open(s->err, O_RDWR | O_APPEND | O_CREAT, S_IRWXU);
         dup2(fd2, STDERR_FILENO);
         close(fd2);
@@ -264,7 +259,10 @@ int execute_simple_command(simple_command *cmd) {
                 }
             }
         } else { //child
-            execute_nonbuiltin(cmd);
+            if (execute_nonbuiltin(cmd)){ //CHANGED THIS TO TRY TO FIX ERROR
+                exit(EXIT_FAILURE);
+            }
+            return EXIT_SUCCESS;
         }
     }
     
