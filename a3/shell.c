@@ -259,7 +259,7 @@ int execute_simple_command(simple_command *cmd) {
                 }
             }
         } else { //child
-            if (execute_nonbuiltin(cmd)){ //CHANGED THIS TO TRY TO FIX ERROR
+            if (execute_nonbuiltin(cmd)){
                 exit(EXIT_FAILURE);
             }
             return EXIT_SUCCESS;
